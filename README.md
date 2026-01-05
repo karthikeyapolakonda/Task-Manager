@@ -1,2 +1,5 @@
-# Simple-Task-Manager
-A Simple Python task management app for adding, removing, listing, prioritizing, and receiving task recommendations based on task descriptions.
+# Task Management System – Python
+• Built a console-based task management application using Python and OOP principles
+• Implemented features to add, remove, update, and list tasks based on priority
+• Designed a keyword-based task recommendation logic using text similarity from task descriptions
+• Used sorting and string processing to improve task prioritization and retrieval
