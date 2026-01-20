@@ -1,13 +1,19 @@
 import streamlit as st
+from datetime import date
+
+# ------------------ MODELS ------------------
 
 class Task:
-    def __init__(self, title, description, priority=1):
+    def __init__(self, title, description, priority, status, due_date):
         self.title = title
         self.description = description
         self.priority = priority
+        self.status = status
+        self.due_date = due_date
 
     def __str__(self):
-        return f"[Priority {self.priority}] {self.title}: {self.description}"
+        return f"[{self.status.upper()} | P{self.priority}] {self.title} (Due: {self.due_date})"
+
 
 class TaskManager:
     def __init__(self):
@@ -18,37 +24,39 @@ class TaskManager:
     def tasks(self):
         return st.session_state.tasks
 
-    def add_task(self, title, description, priority):
-        self.tasks.append(Task(title, description, priority))
+    def add_task(self, task):
+        self.tasks.append(task)
 
-    def remove_task(self, title):
-        self.tasks[:] = [t for t in self.tasks if t.title.lower() != title.lower()]
+    def delete_task(self, title):
+        self.tasks[:] = [t for t in self.tasks if t.title != title]
 
-    def list_tasks(self):
-        return sorted(self.tasks, key=lambda t: t.priority)
+    def update_status(self, title, status):
+        for t in self.tasks:
+            if t.title == title:
+                t.status = status
 
-    def prioritize_task(self, title, new_priority):
-        for task in self.tasks:
-            if task.title.lower() == title.lower():
-                task.priority = new_priority
+    def get_tasks(self):
+        return sorted(self.tasks, key=lambda x: x.priority)
 
-    def recommend_tasks(self, keyword):
+    def overdue_tasks(self):
+        today = date.today()
+        return [t for t in self.tasks if t.due_date < today and t.status != "completed"]
+
+    def recommend(self, keyword):
         keyword_words = set(keyword.lower().split())
-        recommended = []
-
-        for task in self.tasks:
-            desc_words = set(task.description.lower().split())
+        results = []
+        for t in self.tasks:
+            desc_words = set(t.description.lower().split())
             similarity = len(keyword_words & desc_words) / max(len(keyword_words), 1)
             if similarity >= 0.3:
-                recommended.append(task)
+                results.append(t)
+        return results
 
-        return recommended
 
+# ------------------ UI ------------------
 
-# ---------------- UI ----------------
-
-st.set_page_config(page_title="Task Manager", layout="centered")
-st.title("🗂 Task Manager")
+st.set_page_config(page_title="Smart Task Manager", layout="centered")
+st.title("🧠 Smart Task Manager (Python Project)")
 
 manager = TaskManager()
 
@@ -56,42 +64,56 @@ manager = TaskManager()
 st.header("➕ Add Task")
 title = st.text_input("Title")
 description = st.text_area("Description")
-priority = st.number_input("Priority", 1, 10, 1)
+priority = st.number_input("Priority (1 = High)", 1, 10, 1)
+status = st.selectbox("Status", ["pending", "in-progress", "completed"])
+due_date = st.date_input("Due Date")
 
 if st.button("Add Task"):
-    manager.add_task(title, description, priority)
-    st.success("Task added")
+    if title:
+        manager.add_task(Task(title, description, priority, status, due_date))
+        st.success("Task added successfully")
+    else:
+        st.error("Title is required")
 
-# LIST TASKS
-st.header("📋 Tasks")
-for task in manager.list_tasks():
+# VIEW TASKS
+st.header("📋 All Tasks")
+for task in manager.get_tasks():
     st.write(task)
 
-# UPDATE PRIORITY
-st.header("⬆ Update Priority")
-p_title = st.text_input("Task title to update")
-new_priority = st.number_input("New priority", 1, 10)
+# UPDATE STATUS
+st.header("🔄 Update Status")
+u_title = st.text_input("Task Title to Update")
+u_status = st.selectbox("New Status", ["pending", "in-progress", "completed"])
 
-if st.button("Update Priority"):
-    manager.prioritize_task(p_title, new_priority)
-    st.success("Priority updated")
+if st.button("Update"):
+    manager.update_status(u_title, u_status)
+    st.success("Status updated")
 
-# RECOMMEND
-st.header("✨ Recommendations")
+# OVERDUE TASKS
+st.header("⏰ Overdue Tasks")
+overdue = manager.overdue_tasks()
+if overdue:
+    for t in overdue:
+        st.warning(t)
+else:
+    st.info("No overdue tasks")
+
+# RECOMMENDATIONS
+st.header("✨ Task Recommendations")
 keyword = st.text_input("Keyword")
 
 if st.button("Recommend"):
-    results = manager.recommend_tasks(keyword)
+    results = manager.recommend(keyword)
     if results:
-        for task in results:
-            st.write(task)
+        for r in results:
+            st.write(r)
     else:
         st.info("No recommendations found")
 
-# REMOVE
-st.header("🗑 Remove Task")
-r_title = st.text_input("Task title to remove")
+# DELETE TASK
+st.header("🗑 Delete Task")
+d_title = st.text_input("Task Title to Delete")
 
-if st.button("Remove"):
-    manager.remove_task(r_title)
-    st.warning("Task removed")
+if st.button("Delete"):
+    manager.delete_task(d_title)
+    st.warning("Task deleted")
